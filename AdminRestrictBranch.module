@@ -23,7 +23,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 			'title' => 'Admin Restrict Branch',
 			'summary' => 'Restrict site editors to a single branch of the tree.',
 			'href' => '',
-			'version' => 1,
+			'version' => 2,
 			'autoload' => "template=admin",
 			'singular' => true,
             'icon' => 'key'
@@ -71,7 +71,6 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
     public function ready() {
         if($this->data['matchType'] == 'disabled' || wire('user')->isSuperuser()) return;
         $this->addHookAfter('Page::editable', $this, 'hookPageEditable');
-        $this->addHookAfter('Page::addable', $this, 'hookPageAddable');
         if($this->data['restrictType'] == 'editing_and_view' && !isset($_GET['id'])) $this->addHookBefore('ProcessPageList::execute', $this, 'setTreeRoot');
     }
 
@@ -138,20 +137,6 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             $event->return = false;
         }
     }
-
-
-    /**
-     * Page::addable hook
-     *
-     */
-    public function hookPageAddable($event) {
-        if($this->user->hasPermission('page-add')) {
-            $event->return = $this->onMyBranch($event->object);
-        } else {
-            $event->return = false;
-        }
-    }
-
 
 
 
