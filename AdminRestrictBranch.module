@@ -1,0 +1,245 @@
+<?php
+
+/**
+ * Processwire module to restrict site editors to a single branch of the tree.
+ * by Adrian Jones
+ *
+ * ProcessWire 2.x
+ * Copyright (C) 2011 by Ryan Cramer
+ * Licensed under GNU/GPL v2, see LICENSE.TXT
+ *
+ * http://www.processwire.com
+ * http://www.ryancramer.com
+ *
+ */
+
+class AdminRestrictBranch extends WireData implements Module, ConfigurableModule {
+
+	/**
+	 * Basic information about module
+	 */
+	public static function getModuleInfo() {
+		return array(
+			'title' => 'Admin Restrict Branch',
+			'summary' => 'Restrict site editors to a single branch of the tree.',
+			'href' => '',
+			'version' => 1,
+			'autoload' => "template=admin",
+			'singular' => true,
+            'icon' => 'key'
+		);
+	}
+
+
+    /**
+     * Data as used by the get/set functions
+     *
+     */
+    protected $data = array();
+
+
+   /**
+     * Default configuration for module
+     *
+     */
+    static public function getDefaultData() {
+            return array(
+                "matchType" => null,
+                "branchExclusions" => null,
+                "restrictType" => 'editing_and_view'
+            );
+    }
+
+
+    /**
+     * Populate the default config data
+     *
+     */
+    public function __construct() {
+       foreach(self::getDefaultData() as $key => $value) {
+               $this->$key = $value;
+       }
+    }
+
+
+	/**
+	 * Initialize the module and setup hooks
+	 */
+	public function init() {
+	}
+
+    public function ready() {
+        if($this->data['matchType'] == 'disabled' || wire('user')->isSuperuser()) return;
+        $this->addHookAfter('Page::editable', $this, 'hookPageEditable');
+        $this->addHookAfter('Page::addable', $this, 'hookPageAddable');
+        if($this->data['restrictType'] == 'editing_and_view' && !isset($_GET['id'])) $this->addHookBefore('ProcessPageList::execute', $this, 'setTreeRoot');
+    }
+
+    //set pagelist root to the parent whose name matches the role of the user,
+    //eg 'branch-one' role will set the tree to only show the branch with parent->name = 'branch-one'
+    public function setTreeRoot() {
+        if($this->data['matchType'] == 'role_name') {
+            foreach(wire('user')->roles as $role){
+                $p = wire('pages')->get("has_parent!=admin, name={$role->name}");
+                if($p->id) break;
+            }
+        }
+        else {
+            //option to match branch parent defined in user profile
+            $p = $this->user->branch_parent;
+        }
+        //set parent page of tree
+        $_GET['id'] = $p->id;
+
+        //if open get variable is set and it matched the defined parent,
+        //then need this to prevent doubling of page tree
+        if(isset($_GET['open']) && $_GET['open'] == $p->id) wire('input')->get->open = null;
+    }
+
+
+    /**
+     * Check if this page, or any ancestor pages, are editable
+     *
+     * From Netcarver
+     *
+     */
+    public function onMyBranch($page) {
+        $page_on_my_branch = $this->branchCheck($page);
+        if(!$page_on_my_branch) {
+            $parents = $page->parents();
+            while(!$page_on_my_branch && count($parents)) {
+                $p = $parents->pop();
+                $page_on_my_branch = $this->branchCheck($p);
+            }
+        }
+        return $page_on_my_branch;
+    }
+
+    public function branchCheck($page) {
+        if(in_array($page->id, $this->data['branchExclusions'])) {
+            return true;
+        }
+        elseif($this->data['matchType'] == 'role_name') {
+            return $this->user->hasRole($page->name);
+        }
+        else {
+            return $page == $this->user->branch_parent ? true : false;
+        }
+    }
+
+    /**
+     * Page::editable hook
+     *
+     */
+    public function hookPageEditable($event) {
+        if($this->user->hasPermission('page-edit')) {
+            $event->return = $this->onMyBranch($event->object);
+        } else {
+            $event->return = false;
+        }
+    }
+
+
+    /**
+     * Page::addable hook
+     *
+     */
+    public function hookPageAddable($event) {
+        if($this->user->hasPermission('page-add')) {
+            $event->return = $this->onMyBranch($event->object);
+        } else {
+            $event->return = false;
+        }
+    }
+
+
+
+
+    /**
+     * Return an InputfieldsWrapper of Inputfields used to configure the class
+     *
+     * @param array $data Array of config values indexed by field name
+     * @return InputfieldsWrapper
+     *
+     */
+    public static function getModuleConfigInputfields(array $data) {
+
+        $data = array_merge(self::getDefaultData(), $data);
+
+        $wrapper = new InputFieldWrapper();
+
+        $f = wire('modules')->get("InputfieldRadios");
+        $f->attr('name', 'matchType');
+        $f->label = __('How to match user to branch');
+        $f->description = __("'Role Name' limits users to the branch whose parent page name matches the name of one of their roles.\n'Specified Parent' is specifically set on each user's profile page.");
+        $f->required = true;
+        $f->addOption('disabled', 'Disabled');
+        $f->addOption('role_name', 'Role Name');
+        $f->addOption('specified_parent', 'Specified Branch Parent');
+        $f->value = $data['matchType'];
+        $wrapper->add($f);
+
+        $f = wire('modules')->get("InputfieldRadios");
+        $f->attr('name', 'restrictType');
+        $f->label = __('Restrict editing and list viewing, or just editing.');
+        $f->description = __("With 'Editing Only' selected, users will still see all branches in the page tree, but their editing access will be restricted.");
+        $f->required = true;
+        $f->addOption('editing_and_view', 'Editing and List Viewing');
+        $f->addOption('editing_only', 'Editing Only');
+        $f->value = $data['restrictType'];
+        $wrapper->add($f);
+
+        $f = wire('modules')->get("InputfieldPageListSelectMultiple");
+        $f->attr('name', 'branchExclusions');
+        $f->label = __('Branch Exclusions');
+        $f->description = __("Selected branches will be excluded from branch edit restrictions. They still won't show in the page list, but they will remain editable. Useful for external PageTable branches etc.");
+        $f->value = $data['branchExclusions'];
+        $wrapper->add($f);
+
+        return $wrapper;
+    }
+
+
+    public function ___install() {
+
+        //Create branch_parent field on user template
+        if(!$this->fields->branch_parent) {
+            $f = new Field();
+            $f->type = "FieldtypePage";
+            $f->derefAsPage = 2;
+            $f->inputfield = "InputfieldPageListSelect";
+            $f->name = "branch_parent";
+            $f->label = "Branch parent to restrict access to";
+            $f->description = "This is used by the Admin Restrict Branch module to limit this user to only see the branch starting with this parent when viewing the page list in the admin. It also controls editing access to this branch.";
+            $f->notes = __("This only works if this Admin Restrict Branch module config option is set to 'Specified Branch Parent'.");
+            $f->collapsed = Inputfield::collapsedBlank;
+            $f->save();
+
+            $user_template = $this->templates->get("user");
+            $user_template->fields->add($f);
+            $user_template->fields->save();
+
+        }
+
+    }
+
+
+    public function ___uninstall() {
+
+        //remove branch_parent field
+        if($this->fields->branch_parent) {
+
+            $f = $this->fields->branch_parent;
+
+            $user_template = $this->templates->get("user");
+            $user_template->fields->remove($f);
+            $user_template->fields->save();
+
+            $this->fields->delete($f);
+
+        }
+
+    }
+
+
+}
