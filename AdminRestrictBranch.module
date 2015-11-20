@@ -23,7 +23,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 			'title' => 'Admin Restrict Branch',
 			'summary' => 'Restrict site editors to a single branch of the tree.',
 			'href' => 'https://processwire.com/talk/topic/11499-admin-restrict-branch/',
-			'version' => 6,
+			'version' => 7,
 			'autoload' => true,
 			'singular' => true,
             'icon' => 'key'
@@ -71,7 +71,6 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 	}
 
     public function ready() {
-
         //early exit if match type not set yet or superuser
         if($this->data['matchType'] == 'disabled' || $this->data['matchType'] == '' || $this->user->isSuperuser()) return;
 
@@ -138,8 +137,9 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
      *
      */
     public function hookPageEditable($event) {
-        //if superuser exit now as no need to run these checks
-        if(wire('user')->isSuperuser()) return;
+        //early exit if match type not set yet or superuser
+        //checked here because you can't check superuser in init()
+        if($this->data['matchType'] == 'disabled' || $this->data['matchType'] == '' || $this->user->isSuperuser()) return;
 
         if($this->user->hasPermission('page-edit')) {
             $event->return = $this->onMyBranch($event->object);
