@@ -23,7 +23,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 			'title' => 'Admin Restrict Branch',
 			'summary' => 'Restrict site editors to a single branch of the tree.',
 			'href' => 'https://processwire.com/talk/topic/11499-admin-restrict-branch/',
-			'version' => 10,
+			'version' => 11,
 			'autoload' => true,
 			'singular' => true,
             'icon' => 'key'
@@ -197,7 +197,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         $f = wire('modules')->get("InputfieldRadios");
         $f->attr('name', 'matchType');
         $f->label = __('How to match user to branch');
-        $f->description = __("&bull; 'Role Name' limits users to the branch whose parent page name matches the name of one of their roles (eg. 'branch-one' role will be restricted to the 'Branch One' branch.\n&bull; 'Specified Parent' is specifically set on each user's profile page using the 'Branch parent to restrict access to' field.");
+        $f->description = __("&bull; 'Role Name' limits users to the branch whose parent page name matches the name of one of their roles (eg. 'branch-one' role will be restricted to the 'Branch One' branch.\n&bull; 'Specified Parent' is specifically set on each user's profile page using the 'Branch parent to restrict access to' field.\n&bull; 'Custom PHP Code' allows you to build up a page name based on user fields.");
         $f->required = true;
         $f->addOption('disabled', 'Disabled');
         $f->addOption('role_name', 'Role Name');
