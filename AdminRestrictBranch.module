@@ -23,7 +23,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 			'title' => 'Admin Restrict Branch',
 			'summary' => 'Restrict site editors to a single branch of the tree.',
 			'href' => 'https://processwire.com/talk/topic/11499-admin-restrict-branch/',
-			'version' => 4,
+			'version' => 5,
 			'autoload' => true,
 			'singular' => true,
             'icon' => 'key'
@@ -163,7 +163,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         $f = wire('modules')->get("InputfieldRadios");
         $f->attr('name', 'matchType');
         $f->label = __('How to match user to branch');
-        $f->description = __("'Role Name' limits users to the branch whose parent page name matches the name of one of their roles.\n'Specified Parent' is specifically set on each user's profile page.");
+        $f->description = __("&bull; 'Role Name' limits users to the branch whose parent page name matches the name of one of their roles (eg. 'branch-one' role will be restricted to the 'Branch One' branch.\n&bull; 'Specified Parent' is specifically set on each user's profile page using the 'Branch parent to restrict access to' field.");
         $f->required = true;
         $f->addOption('disabled', 'Disabled');
         $f->addOption('role_name', 'Role Name');
@@ -174,7 +174,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         $f = wire('modules')->get("InputfieldRadios");
         $f->attr('name', 'restrictType');
         $f->label = __('Restrict editing and list viewing, or just editing.');
-        $f->description = __("With 'Editing Only' selected, users will still see all branches in the page tree, but their editing access will be restricted.");
+        $f->description = __("With 'Editing Only' selected, users will still see all branches in the page tree, but their editing access will still be restricted.");
         $f->required = true;
         $f->addOption('editing_and_view', 'Editing and List Viewing');
         $f->addOption('editing_only', 'Editing Only');
@@ -183,8 +183,8 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 
         $f = wire('modules')->get("InputfieldPageListSelectMultiple");
         $f->attr('name', 'branchExclusions');
-        $f->label = __('Branch Exclusions');
-        $f->description = __("Selected branches will be excluded from branch edit restrictions. They still won't show in the page list, but they will remain editable. Useful for external PageTable branches etc.");
+        $f->label = __('Branch edit exclusions');
+        $f->description = __("Selected branches will be excluded from branch edit restrictions. They still won't show in the page list, but they will remain editable, which is useful for external PageTable branches etc.");
         $f->value = $data['branchExclusions'];
         $wrapper->add($f);
 
@@ -202,7 +202,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             $f->inputfield = "InputfieldPageListSelect";
             $f->name = "branch_parent";
             $f->label = "Branch parent to restrict access to";
-            $f->description = "This is used by the Admin Restrict Branch module to limit this user to only see the branch starting with this parent when viewing the page list in the admin. It also controls editing access to this branch.";
+            $f->description = "This is used by the Admin Restrict Branch module to limit this user to only see the branch starting with this parent when viewing the page list in the admin. It also restricts editing access to just this branch.";
             $f->notes = __("This only works if this Admin Restrict Branch module config option is set to 'Specified Branch Parent'.");
             $f->collapsed = Inputfield::collapsedBlank;
             $f->save();
