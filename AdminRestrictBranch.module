@@ -23,7 +23,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 			'title' => 'Admin Restrict Branch',
 			'summary' => 'Restrict site editors to a single branch of the tree.',
 			'href' => 'https://processwire.com/talk/topic/11499-admin-restrict-branch/',
-			'version' => 8,
+			'version' => 9,
 			'autoload' => true,
 			'singular' => true,
             'icon' => 'key'
@@ -75,14 +75,44 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         if($this->data['matchType'] == 'disabled' || $this->data['matchType'] == '' || $this->user->isSuperuser()) return;
 
         //only set up page list restriction hook if in admin and restrict type allows it
-        if($this->page->template == 'admin' && $this->data['restrictType'] == 'editing_and_view' && !isset($_GET['id'])) {
-            $this->addHookBefore('ProcessPageList::execute', $this, 'setTreeRoot');
+        if($this->page->template == 'admin' && $this->data['restrictType'] == 'editing_and_view') {
+            if(!isset($_GET['id'])) {
+                $this->addHookBefore('ProcessPageList::execute', $this, 'setBranchRoot', array('priority'=>2));
+            }
+            else {
+                $this->addHookBefore('ProcessPageList::execute', $this, 'resetId', array('priority'=>1));
+            }
         }
     }
 
+    //in case the user tries to manually pass an id in the url to access another branch
+    public function resetId() {
+        if(isset($_GET['id']) && !$this->onMyBranch($this->pages->get($_GET['id']))) {
+            //get the restricted branch root
+            $p = $this->getBranchRoot();
+            $_GET['id'] = $p->id;
+        }
+    }
+
+
     //set pagelist root to the parent whose name matches the role of the user,
     //eg 'branch-one' role will set the tree to only show the branch with parent->name = 'branch-one'
-    public function setTreeRoot() {
+    public function setBranchRoot() {
+
+        //get the restricted branch root
+        $p = $this->getBranchRoot();
+
+        //set parent page of branch
+        $_GET['id'] = $p->id;
+
+        //if open get variable is set and it matched the defined parent,
+        //then need this to prevent doubling of page branch
+        if(isset($_GET['open']) && $_GET['open'] == $p->id) wire('input')->get->open = null;
+    }
+
+
+    public function getBranchRoot() {
+
         if($this->data['matchType'] == 'role_name') {
             foreach(wire('user')->roles as $role){
                 $p = wire('pages')->get("has_parent!=admin, name={$role->name}, include=all");
@@ -93,12 +123,8 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             //option to match branch parent defined in user profile
             $p = $this->user->branch_parent;
         }
-        //set parent page of tree
-        $_GET['id'] = $p->id;
 
-        //if open get variable is set and it matched the defined parent,
-        //then need this to prevent doubling of page tree
-        if(isset($_GET['open']) && $_GET['open'] == $p->id) wire('input')->get->open = null;
+        return $p;
     }
 
 
