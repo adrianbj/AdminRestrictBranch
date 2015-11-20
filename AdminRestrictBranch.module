@@ -23,7 +23,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 			'title' => 'Admin Restrict Branch',
 			'summary' => 'Restrict site editors to a single branch of the tree.',
 			'href' => 'https://processwire.com/talk/topic/11499-admin-restrict-branch/',
-			'version' => 7,
+			'version' => 8,
 			'autoload' => true,
 			'singular' => true,
             'icon' => 'key'
@@ -75,7 +75,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         if($this->data['matchType'] == 'disabled' || $this->data['matchType'] == '' || $this->user->isSuperuser()) return;
 
         //only set up page list restriction hook if in admin and restrict type allows it
-        if($this->page->template == 'admin' && $this->data['restrictType'] == 'editing_and_view') {
+        if($this->page->template == 'admin' && $this->data['restrictType'] == 'editing_and_view' && !isset($_GET['id'])) {
             $this->addHookBefore('ProcessPageList::execute', $this, 'setTreeRoot');
         }
     }
