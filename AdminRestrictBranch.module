@@ -23,8 +23,8 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 			'title' => 'Admin Restrict Branch',
 			'summary' => 'Restrict site editors to a single branch of the tree.',
 			'href' => '',
-			'version' => 2,
-			'autoload' => "template=admin",
+			'version' => 3,
+			'autoload' => true,
 			'singular' => true,
             'icon' => 'key'
 		);
