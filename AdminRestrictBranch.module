@@ -23,7 +23,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 			'title' => 'Admin Restrict Branch',
 			'summary' => 'Restrict site editors to a single branch of the tree.',
 			'href' => 'https://processwire.com/talk/topic/11499-admin-restrict-branch/',
-			'version' => 9,
+			'version' => 10,
 			'autoload' => true,
 			'singular' => true,
             'icon' => 'key'
@@ -45,6 +45,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
     static public function getDefaultData() {
             return array(
                 "matchType" => null,
+                "phpCode" => '',
                 "branchExclusions" => null,
                 "restrictType" => 'editing_and_view'
             );
@@ -118,6 +119,10 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
                 $p = wire('pages')->get("has_parent!=admin, name={$role->name}, include=all");
                 if($p->id) break;
             }
+        }
+        elseif($this->data['matchType'] == 'custom_php_code') {
+            $user = $this->user;
+            $p = wire('pages')->get("has_parent!=admin, name=".eval($this->data['phpCode']).", include=all");
         }
         else {
             //option to match branch parent defined in user profile
@@ -197,7 +202,19 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         $f->addOption('disabled', 'Disabled');
         $f->addOption('role_name', 'Role Name');
         $f->addOption('specified_parent', 'Specified Branch Parent');
+        $f->addOption('custom_php_code', 'Custom PHP code');
         $f->value = $data['matchType'];
+        $wrapper->add($f);
+
+        $f = wire('modules')->get("InputfieldText");
+        $f->attr('name', 'phpCode');
+        $f->label = __('Custom PHP code');
+        $f->description = __('Has access to $user variable.');
+        $f->notes = __('eg. return strtolower($user->first_name . "-" . $user->last_name);'."\nThis example allows automatic restriction of a user to a branch named to match their first and last names.");
+        $f->required = true;
+        $f->showIf="matchType='custom_php_code'";
+        $f->requiredIf="matchType='custom_php_code'";
+        $f->value = $data['phpCode'];
         $wrapper->add($f);
 
         $f = wire('modules')->get("InputfieldRadios");
