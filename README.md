@@ -3,7 +3,22 @@ Admin Restrict Branch
 
 Processwire module to restrict site editors to a single branch of the tree.
 
-## Alpha Warning - please test carefully before trusting that it restricts users as you expect!
+###Functionality
+
+You can restrict the user to only be able to view and/or edit pages from a specific branch of the page tree.
+
+Restrictions work in the admin list view as well as via the API for front-end editing (works with FREDI, FEEL, and manual API calls).
+
+There are three ways to match users to a branch parent:
+* Specified Branch Parent
+* Role Name
+* Custom PHP code
+
+Name matching can be limited to a specific parent to reduce mis-matches and improve matching efficiency.
+
+You can determine whether to limit editing and list viewing, or just editing.
+
+You can specify branch exclusions which will allow for editing of PageTable content housed in external parent branches and some other use cases.
 
 ## License
 
