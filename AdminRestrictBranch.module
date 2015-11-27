@@ -23,7 +23,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 			'title' => 'Admin Restrict Branch',
 			'summary' => 'Restrict site editors to a single branch of the tree.',
 			'href' => 'https://processwire.com/talk/topic/11499-admin-restrict-branch/',
-			'version' => 13,
+			'version' => 14,
 			'autoload' => true,
 			'singular' => true,
             'icon' => 'key'
@@ -36,6 +36,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
      *
      */
     protected $data = array();
+    protected $branchesParent = '';
 
 
    /**
@@ -45,6 +46,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
     static public function getDefaultData() {
             return array(
                 "matchType" => null,
+                "branchesParent" => null,
                 "phpCode" => '',
                 "branchExclusions" => null,
                 "restrictType" => 'editing_and_view'
@@ -67,8 +69,12 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 	 * Initialize the module and setup hooks
 	 */
 	public function init() {
-        // modify $page->editable() based on branch restrictions - works in admin and front-end (for FREDI, FEEL, etc)
+
+        if($this->data['branchesParent']) $this->branchesParent = "has_parent=".$this->data['branchesParent'].", ";
+
+        // modify $page->editable() and $page->addable() based on branch restrictions - works in admin and front-end (for FREDI, FEEL, etc)
         $this->addHookAfter('Page::editable', $this, 'hookPageEditable');
+        $this->addHookAfter('Page::addable', $this, 'hookPageAddable');
 	}
 
     public function ready() {
@@ -96,8 +102,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
     }
 
 
-    //set pagelist root to the parent whose name matches the role of the user,
-    //eg 'branch-one' role will set the tree to only show the branch with parent->name = 'branch-one'
+    //set pagelist root to the correct parent based on the "How to match user to branch settings"
     public function setBranchRoot() {
 
         //get the restricted branch root
@@ -116,13 +121,13 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 
         if($this->data['matchType'] == 'role_name') {
             foreach(wire('user')->roles as $role){
-                $p = wire('pages')->get("has_parent!=admin, name={$role->name}, include=all");
+                $p = wire('pages')->get($this->branchesParent . "has_parent!=admin, name={$role->name}, include=all");
                 if($p->id) break;
             }
         }
         elseif($this->data['matchType'] == 'custom_php_code') {
             $user = $this->user;
-            $p = wire('pages')->get("has_parent!=admin, name=".$this->sanitizer->pageNameTranslate(eval($this->data['phpCode'])).", include=all");
+            $p = wire('pages')->get($this->branchesParent . "has_parent!=admin, name=".$this->sanitizer->pageNameTranslate(eval($this->data['phpCode'])).", include=all");
         }
         else {
             //option to match branch parent defined in user profile
@@ -156,11 +161,11 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             return true;
         }
         elseif($this->data['matchType'] == 'role_name') {
-            return $this->user->hasRole($page->name);
+            return ($this->user->hasRole($page->name) && $page->parents->has($this->pages->get($this->data['branchesParent']))) ? true : false;
         }
         elseif($this->data['matchType'] == 'custom_php_code') {
             $user = $this->user;
-            return $page->id == wire('pages')->get("has_parent!=admin, name=".$this->sanitizer->pageNameTranslate(eval($this->data['phpCode'])).", include=all")->id ? true : false;
+            return $page->id == wire('pages')->get($this->branchesParent . "has_parent!=admin, name=".$this->sanitizer->pageNameTranslate(eval($this->data['phpCode'])).", include=all")->id ? true : false;
         }
         else {
             return $page->id == $this->user->branch_parent->id ? true : false;
@@ -176,7 +181,29 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         //checked here because you can't check superuser in init()
         if($this->data['matchType'] == 'disabled' || $this->data['matchType'] == '' || $this->user->isSuperuser()) return;
 
+        // in case there is already a defined exclusion for this user's role for this page
+        if(!$event->return) return;
+
         if($this->user->hasPermission('page-edit')) {
+            $event->return = $this->onMyBranch($event->object);
+        } else {
+            $event->return = false;
+        }
+    }
+
+    /**
+     * Page::addable hook
+     *
+     */
+    public function hookPageAddable($event) {
+        //early exit if match type not set yet or superuser
+        //checked here because you can't check superuser in init()
+        if($this->data['matchType'] == 'disabled' || $this->data['matchType'] == '' || $this->user->isSuperuser()) return;
+
+        // in case there is already a defined exclusion for this user's role for this page
+        if(!$event->return) return;
+
+        if($this->user->hasPermission('page-add')) {
             $event->return = $this->onMyBranch($event->object);
         } else {
             $event->return = false;
@@ -204,10 +231,19 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         $f->description = __("&bull; 'Role Name' limits users to the branch whose parent page name matches the name of one of their roles (eg. 'branch-one' role will be restricted to the 'Branch One' branch.\n&bull; 'Specified Parent' is specifically set on each user's profile page using the 'Branch parent to restrict access to' field.\n&bull; 'Custom PHP Code' allows you to build up a page name based on user fields.");
         $f->required = true;
         $f->addOption('disabled', 'Disabled');
-        $f->addOption('role_name', 'Role Name');
         $f->addOption('specified_parent', 'Specified Branch Parent');
+        $f->addOption('role_name', 'Role Name');
         $f->addOption('custom_php_code', 'Custom PHP code');
         $f->value = $data['matchType'];
+        $wrapper->add($f);
+
+        $f = wire('modules')->get("InputfieldPageListSelect");
+        $f->attr('name', 'branchesParent');
+        $f->label = __('Parent to restrict Role Name and Custom PHP code matches to.');
+        $f->description = __("The Role Name and Custom PHP code options match a page name (not a path), so this option limits matching to branches under the selected parent.");
+        $f->notes = __("This setting is optional but recommended - if no page is chosen, the selector will search the entire page tree for matching page names. Note that it is checked using 'has_parent' so the selected page can be further up the tree than a direct parent.");
+        $f->showIf="matchType!='specified_parent'";
+        $f->value = $data['branchesParent'];
         $wrapper->add($f);
 
         $f = wire('modules')->get("InputfieldText");
