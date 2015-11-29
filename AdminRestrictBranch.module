@@ -23,7 +23,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 			'title' => 'Admin Restrict Branch',
 			'summary' => 'Restrict site editors to a single branch of the tree.',
 			'href' => 'https://processwire.com/talk/topic/11499-admin-restrict-branch/',
-			'version' => 14,
+			'version' => 15,
 			'autoload' => true,
 			'singular' => true,
             'icon' => 'key'
@@ -70,7 +70,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 	 */
 	public function init() {
 
-        if($this->data['branchesParent']) $this->branchesParent = "has_parent=".$this->data['branchesParent'].", ";
+        if(isset($this->data['branchesParent']) && $this->data['branchesParent']) $this->branchesParent = "has_parent=".$this->data['branchesParent'].", ";
 
         // modify $page->editable() and $page->addable() based on branch restrictions - works in admin and front-end (for FREDI, FEEL, etc)
         $this->addHookAfter('Page::editable', $this, 'hookPageEditable');
@@ -223,7 +223,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 
         $data = array_merge(self::getDefaultData(), $data);
 
-        $wrapper = new InputFieldWrapper();
+        $wrapper = new InputfieldWrapper();
 
         $f = wire('modules')->get("InputfieldRadios");
         $f->attr('name', 'matchType');
