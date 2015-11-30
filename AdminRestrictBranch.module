@@ -1,4 +1,4 @@
-<?php
+<?php namespace ProcessWire;
 
 /**
  * Processwire module to restrict site editors to a single branch of the tree.
@@ -23,7 +23,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 			'title' => 'Admin Restrict Branch',
 			'summary' => 'Restrict site editors to a single branch of the tree.',
 			'href' => 'https://processwire.com/talk/topic/11499-admin-restrict-branch/',
-			'version' => 15,
+			'version' => 16,
 			'autoload' => true,
 			'singular' => true,
             'icon' => 'key'
@@ -37,6 +37,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
      */
     protected $data = array();
     protected $branchesParent = '';
+    protected $branchRootParent = '';
 
 
    /**
@@ -72,6 +73,8 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 
         if(isset($this->data['branchesParent']) && $this->data['branchesParent']) $this->branchesParent = "has_parent=".$this->data['branchesParent'].", ";
 
+        $this->branchRootParent = $this->getBranchRoot();
+
         // modify $page->editable() and $page->addable() based on branch restrictions - works in admin and front-end (for FREDI, FEEL, etc)
         $this->addHookAfter('Page::editable', $this, 'hookPageEditable');
         $this->addHookAfter('Page::addable', $this, 'hookPageAddable');
@@ -96,8 +99,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
     public function resetId() {
         if(isset($_GET['id']) && !$this->onMyBranch($this->pages->get($_GET['id']))) {
             //get the restricted branch root
-            $p = $this->getBranchRoot();
-            $_GET['id'] = $p->id;
+            $_GET['id'] = $this->branchRootParent;
         }
     }
 
@@ -105,15 +107,12 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
     //set pagelist root to the correct parent based on the "How to match user to branch settings"
     public function setBranchRoot() {
 
-        //get the restricted branch root
-        $p = $this->getBranchRoot();
-
         //set parent page of branch
-        $_GET['id'] = $p->id;
+        $_GET['id'] = $this->branchRootParent;
 
         //if open get variable is set and it matched the defined parent,
         //then need this to prevent doubling of page branch
-        if(isset($_GET['open']) && $_GET['open'] == $p->id) wire('input')->get->open = null;
+        if(isset($_GET['open']) && $_GET['open'] == $this->branchRootParent) wire('input')->get->open = null;
     }
 
 
@@ -134,7 +133,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             $p = $this->user->branch_parent;
         }
 
-        return $p;
+        return $p->id;
     }
 
 
@@ -160,15 +159,8 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         if(in_array($page->id, $this->data['branchExclusions'])) {
             return true;
         }
-        elseif($this->data['matchType'] == 'role_name') {
-            return ($this->user->hasRole($page->name) && $page->parents->has($this->pages->get($this->data['branchesParent']))) ? true : false;
-        }
-        elseif($this->data['matchType'] == 'custom_php_code') {
-            $user = $this->user;
-            return $page->id == wire('pages')->get($this->branchesParent . "has_parent!=admin, name=".$this->sanitizer->pageNameTranslate(eval($this->data['phpCode'])).", include=all")->id ? true : false;
-        }
         else {
-            return $page->id == $this->user->branch_parent->id ? true : false;
+            return $page->id == $this->branchRootParent ? true : false;
         }
     }
 
