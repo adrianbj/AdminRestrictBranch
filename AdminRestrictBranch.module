@@ -15,20 +15,20 @@
 
 class AdminRestrictBranch extends WireData implements Module, ConfigurableModule {
 
-	/**
-	 * Basic information about module
-	 */
-	public static function getModuleInfo() {
-		return array(
-			'title' => 'Admin Restrict Branch',
-			'summary' => 'Restrict site editors to a single branch of the tree.',
-			'href' => 'https://processwire.com/talk/topic/11499-admin-restrict-branch/',
-			'version' => 19,
-			'autoload' => true,
-			'singular' => true,
+    /**
+     * Basic information about module
+     */
+    public static function getModuleInfo() {
+        return array(
+            'title' => 'Admin Restrict Branch',
+            'summary' => 'Restrict site editors to a single branch of the tree.',
+            'href' => 'https://processwire.com/talk/topic/11499-admin-restrict-branch/',
+            'version' => 19,
+            'autoload' => true,
+            'singular' => true,
             'icon' => 'key'
-		);
-	}
+        );
+    }
 
 
     /**
@@ -65,10 +65,10 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
     }
 
 
-	/**
-	 * Initialize the module and setup hooks
-	 */
-	public function init() {
+    /**
+     * Initialize the module and setup hooks
+     */
+    public function init() {
 
         //early exit if match type not set yet or superuser
         if($this->data['matchType'] == 'disabled' || $this->data['matchType'] == '' || $this->user->isSuperuser()) return;
@@ -79,7 +79,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         // modify $page->editable() and $page->addable() based on branch restrictions - works in admin and front-end (for FREDI, FEEL, etc)
         $this->addHookAfter('Page::editable', $this, 'hookPageEditable');
         $this->addHookAfter('Page::addable', $this, 'hookPageAddable');
-	}
+    }
 
     public function ready() {
         //early exit if match type not set yet or superuser
