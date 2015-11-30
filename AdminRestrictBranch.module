@@ -23,7 +23,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 			'title' => 'Admin Restrict Branch',
 			'summary' => 'Restrict site editors to a single branch of the tree.',
 			'href' => 'https://processwire.com/talk/topic/11499-admin-restrict-branch/',
-			'version' => 18,
+			'version' => 19,
 			'autoload' => true,
 			'singular' => true,
             'icon' => 'key'
@@ -70,6 +70,9 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 	 */
 	public function init() {
 
+        //early exit if match type not set yet or superuser
+        if($this->data['matchType'] == 'disabled' || $this->data['matchType'] == '' || $this->user->isSuperuser()) return;
+
         // get the branch root parent page ID for the matched page
         $this->branchRootParentId = $this->getBranchRootParentId();
 
@@ -80,6 +83,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 
     public function ready() {
         //early exit if match type not set yet or superuser
+        //the superuser check also prevents this messing with ProcessLister in module config settings
         if($this->data['matchType'] == 'disabled' || $this->data['matchType'] == '' || $this->user->isSuperuser()) return;
 
         //only set up page list restriction hook if in admin and restrict type allows it
@@ -116,9 +120,6 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 
     public function getBranchRootParentId() {
 
-        //checked here because you can't check superuser in init()
-        if($this->data['matchType'] == 'disabled' || $this->data['matchType'] == '' || $this->user->isSuperuser()) return;
-
         if(isset($this->data['branchesParent']) && $this->data['branchesParent']) {
             $branchesParentSelector = "has_parent=".$this->data['branchesParent'].", ";
         }
@@ -142,6 +143,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         }
 
         return $p->id;
+
     }
 
 
@@ -177,10 +179,6 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
      *
      */
     public function hookPageEditable($event) {
-        //early exit if match type not set yet or superuser
-        //checked here because you can't check superuser in init()
-        if($this->data['matchType'] == 'disabled' || $this->data['matchType'] == '' || $this->user->isSuperuser()) return;
-
         // in case there is already a defined exclusion for this user's role for this page
         if(!$event->return) return;
 
@@ -196,10 +194,6 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
      *
      */
     public function hookPageAddable($event) {
-        //early exit if match type not set yet or superuser
-        //checked here because you can't check superuser in init()
-        if($this->data['matchType'] == 'disabled' || $this->data['matchType'] == '' || $this->user->isSuperuser()) return;
-
         // in case there is already a defined exclusion for this user's role for this page
         if(!$event->return) return;
 
