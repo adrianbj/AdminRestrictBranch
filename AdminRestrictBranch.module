@@ -23,7 +23,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 			'title' => 'Admin Restrict Branch',
 			'summary' => 'Restrict site editors to a single branch of the tree.',
 			'href' => 'https://processwire.com/talk/topic/11499-admin-restrict-branch/',
-			'version' => 17,
+			'version' => 18,
 			'autoload' => true,
 			'singular' => true,
             'icon' => 'key'
@@ -36,8 +36,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
      *
      */
     protected $data = array();
-    protected $branchesParent = '';
-    protected $branchRootParent = '';
+    protected $branchRootParentId = '';
 
 
    /**
@@ -71,9 +70,8 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 	 */
 	public function init() {
 
-        if(isset($this->data['branchesParent']) && $this->data['branchesParent']) $this->branchesParent = "has_parent=".$this->data['branchesParent'].", ";
-
-        $this->branchRootParent = $this->getBranchRoot();
+        // get the branch root parent page ID for the matched page
+        $this->branchRootParentId = $this->getBranchRootParentId();
 
         // modify $page->editable() and $page->addable() based on branch restrictions - works in admin and front-end (for FREDI, FEEL, etc)
         $this->addHookAfter('Page::editable', $this, 'hookPageEditable');
@@ -97,9 +95,9 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 
     //in case the user tries to manually pass an id in the url to access another branch
     public function resetId() {
-        if(isset($_GET['id']) && !$this->onMyBranch($this->pages->get($_GET['id']))) {
+        if(isset($_GET['id']) && !$this->onAllowedBranches($this->pages->get($_GET['id']))) {
             //get the restricted branch root
-            $_GET['id'] = $this->branchRootParent;
+            $_GET['id'] = $this->branchRootParentId;
         }
     }
 
@@ -108,25 +106,35 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
     public function setBranchRoot() {
 
         //set parent page of branch
-        $_GET['id'] = $this->branchRootParent;
+        $_GET['id'] = $this->branchRootParentId;
 
         //if open get variable is set and it matched the defined parent,
         //then need this to prevent doubling of page branch
-        if(isset($_GET['open']) && $_GET['open'] == $this->branchRootParent) wire('input')->get->open = null;
+        if(isset($_GET['open']) && $_GET['open'] == $this->branchRootParentId) wire('input')->get->open = null;
     }
 
 
-    public function getBranchRoot() {
+    public function getBranchRootParentId() {
+
+        //checked here because you can't check superuser in init()
+        if($this->data['matchType'] == 'disabled' || $this->data['matchType'] == '' || $this->user->isSuperuser()) return;
+
+        if(isset($this->data['branchesParent']) && $this->data['branchesParent']) {
+            $branchesParentSelector = "has_parent=".$this->data['branchesParent'].", ";
+        }
+        else {
+            $branchesParentSelector = '';
+        }
 
         if($this->data['matchType'] == 'role_name') {
             foreach(wire('user')->roles as $role){
-                $p = wire('pages')->get($this->branchesParent . "has_parent!=admin, name={$role->name}, include=all");
+                $p = wire('pages')->get($branchesParentSelector . "has_parent!=admin, name={$role->name}, include=all");
                 if($p->id) break;
             }
         }
         elseif($this->data['matchType'] == 'custom_php_code') {
             $user = $this->user;
-            $p = wire('pages')->get($this->branchesParent . "has_parent!=admin, name=".$this->sanitizer->pageNameTranslate(eval($this->data['phpCode'])).", include=all");
+            $p = wire('pages')->get($branchesParentSelector . "has_parent!=admin, name=".$this->sanitizer->pageNameTranslate(eval($this->data['phpCode'])).", include=all");
         }
         else {
             //option to match branch parent defined in user profile
@@ -137,13 +145,13 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
     }
 
 
+
     /**
-     * Check if this page, or any ancestor pages, are editable
+     * Check if this page, or any ancestor pages, are the defined branch root parent or in the excluded branches
      *
      * From Netcarver
-     *
      */
-    public function onMyBranch($page) {
+    public function onAllowedBranches($page) {
         $page_on_my_branch = $this->branchCheck($page);
         if(!$page_on_my_branch) {
             $parents = $page->parents();
@@ -160,7 +168,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             return true;
         }
         else {
-            return $page->id == $this->branchRootParent ? true : false;
+            return $page->id == $this->branchRootParentId ? true : false;
         }
     }
 
@@ -177,7 +185,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         if(!$event->return) return;
 
         if($this->user->hasPermission('page-edit')) {
-            $event->return = $this->onMyBranch($event->object);
+            $event->return = $this->onAllowedBranches($event->object);
         } else {
             $event->return = false;
         }
@@ -196,7 +204,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         if(!$event->return) return;
 
         if($this->user->hasPermission('page-add')) {
-            $event->return = $this->onMyBranch($event->object);
+            $event->return = $this->onAllowedBranches($event->object);
         } else {
             $event->return = false;
         }
