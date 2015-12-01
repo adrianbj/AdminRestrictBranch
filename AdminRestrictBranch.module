@@ -221,30 +221,30 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 
         $f = wire('modules')->get("InputfieldRadios");
         $f->attr('name', 'matchType');
-        $f->label = __('How to match user to branch');
-        $f->description = __("&bull; 'Role Name' limits users to the branch whose parent page name matches the name of one of their roles (eg. 'branch-one' role will be restricted to the 'Branch One' branch.\n&bull; 'Specified Parent' is specifically set on each user's profile page using the 'Branch parent to restrict access to' field.\n&bull; 'Custom PHP Code' allows you to build up a page name based on user fields.");
+        $f->label = __('How to match user to branch', __FILE__);
+        $f->description = "• " . __("'Role Name' limits users to the branch whose parent page name matches the name of one of their roles (eg. 'branch-one' role will be restricted to the 'Branch One' branch).", __FILE__) . PHP_EOL . "• " . __("'Specified Parent' is specifically set on each user's profile page using the 'Branch parent to restrict access to' field.", __FILE__) . PHP_EOL . "• " . __("'Custom PHP Code' allows you to build up a page name based on user fields.", __FILE__);
         $f->required = true;
-        $f->addOption('disabled', 'Disabled');
-        $f->addOption('specified_parent', 'Specified Branch Parent');
-        $f->addOption('role_name', 'Role Name');
-        $f->addOption('custom_php_code', 'Custom PHP code');
+        $f->addOption('disabled', __('Disabled', __FILE__));
+        $f->addOption('specified_parent', __('Specified Branch Parent', __FILE__));
+        $f->addOption('role_name', __('Role Name', __FILE__));
+        $f->addOption('custom_php_code', __('Custom PHP code', __FILE__));
         $f->value = $data['matchType'];
         $wrapper->add($f);
 
         $f = wire('modules')->get("InputfieldPageListSelect");
         $f->attr('name', 'branchesParent');
-        $f->label = __('Parent to restrict Role Name and Custom PHP code matches to.');
-        $f->description = __("The Role Name and Custom PHP code options match a page name (not a path), so this option limits matching to branches under the selected parent.");
-        $f->notes = __("This setting is optional but recommended - if no page is chosen, the selector will search the entire page tree for matching page names. Note that it is checked using 'has_parent' so the selected page can be further up the tree than a direct parent.");
+        $f->label = __('Parent to restrict Role Name and Custom PHP code matches to.', __FILE__);
+        $f->description = __("The Role Name and Custom PHP code options match a page name (not a path), so this option limits matching to branches under the selected parent.", __FILE__);
+        $f->notes = __("This setting is optional but recommended - if no page is chosen, the selector will search the entire page tree for matching page names. Note that it is checked using 'has_parent' so the selected page can be further up the tree than a direct parent.", __FILE__);
         $f->showIf="matchType!='specified_parent'";
         $f->value = $data['branchesParent'];
         $wrapper->add($f);
 
         $f = wire('modules')->get("InputfieldText");
         $f->attr('name', 'phpCode');
-        $f->label = __('Custom PHP code');
-        $f->description = __('Has access to $user variable.');
-        $f->notes = __('eg. return strtolower($user->first_name . "-" . $user->last_name);'."\nThis example allows automatic restriction of a user to a branch named to match their first and last names.");
+        $f->label = __('Custom PHP code', __FILE__);
+        $f->description = __('Has access to $user variable.', __FILE__);
+        $f->notes = __('Example', __FILE__) . ': ' . 'return strtolower($user->first_name . "-" . $user->last_name);' . PHP_EOL . __("This example allows automatic restriction of a user to a branch named to match their first and last names.", __FILE__);
         $f->required = true;
         $f->showIf="matchType='custom_php_code'";
         $f->requiredIf="matchType='custom_php_code'";
@@ -253,18 +253,18 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 
         $f = wire('modules')->get("InputfieldRadios");
         $f->attr('name', 'restrictType');
-        $f->label = __('Restrict editing and list viewing, or just editing.');
-        $f->description = __("With 'Editing Only' selected, users will still see all branches in the page tree, but their editing access will still be restricted.");
+        $f->label = __('Restrict editing and list viewing, or just editing.', __FILE__);
+        $f->description = __("With 'Editing Only' selected, users will still see all branches in the page tree, but their editing access will still be restricted.", __FILE__);
         $f->required = true;
-        $f->addOption('editing_and_view', 'Editing and List Viewing');
-        $f->addOption('editing_only', 'Editing Only');
+        $f->addOption('editing_and_view', __('Editing and List Viewing', __FILE__));
+        $f->addOption('editing_only', __('Editing Only', __FILE__));
         $f->value = $data['restrictType'];
         $wrapper->add($f);
 
         $f = wire('modules')->get("InputfieldPageListSelectMultiple");
         $f->attr('name', 'branchExclusions');
-        $f->label = __('Branch edit exclusions');
-        $f->description = __("Selected branches will be excluded from branch edit restrictions. They still won't show in the page list, but they will remain editable, which is useful for external PageTable branches etc.");
+        $f->label = __('Branch edit exclusions', __FILE__);
+        $f->description = __("Selected branches will be excluded from branch edit restrictions. They still won't show in the page list, but they will remain editable, which is useful for external PageTable branches etc.", __FILE__);
         $f->value = $data['branchExclusions'];
         $wrapper->add($f);
 
@@ -283,7 +283,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             $f->name = "branch_parent";
             $f->label = "Branch parent to restrict access to";
             $f->description = "This is used by the Admin Restrict Branch module to limit this user to only see the branch starting with this parent when viewing the page list in the admin. It also restricts editing access to just this branch.";
-            $f->notes = __("This only works if this Admin Restrict Branch module config option is set to 'Specified Branch Parent'.");
+            $f->notes = __("This only works if this Admin Restrict Branch module config option is set to 'Specified Branch Parent'.", __FILE__);
             $f->collapsed = Inputfield::collapsedBlank;
             $f->save();
 
