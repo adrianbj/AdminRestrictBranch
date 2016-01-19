@@ -20,6 +20,8 @@ You can determine whether to limit editing and list viewing, or just editing.
 
 You can specify branch exclusions which will allow for editing of PageTable content housed in external parent branches and some other use cases.
 
+You can conditionslly prevent admin search from returning restricted pages for things like inserting links to pages via the autocomplete option in CKEditor.
+
 ## License
 
 This program is free software; you can redistribute it and/or
