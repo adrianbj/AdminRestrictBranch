@@ -23,7 +23,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             'title' => 'Admin Restrict Branch',
             'summary' => 'Restrict site editors to a single branch of the tree.',
             'href' => 'https://processwire.com/talk/topic/11499-admin-restrict-branch/',
-            'version' => 23,
+            'version' => 24,
             'autoload' => true,
             'singular' => true,
             'icon' => 'key'
@@ -101,18 +101,18 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
                 $this->addHookBefore('ProcessPageList::execute', $this, 'resetId', array('priority'=>1));
             }
             //modify breadcrumbs to remove pages outside restricted branch
-            if($this->data['modifyBreadcrumbs']) $this->addHookBefore('ProcessPageEdit::execute', $this, 'modifyBreadcrumb');
+            if($this->data['modifyBreadcrumbs']) $this->addHookAfter('Process::breadcrumb', $this, 'modifyBreadcrumb');
         }
     }
 
-    public function modifyBreadcrumb() {
-        foreach(wire('breadcrumbs') as $breadcrumb) {
-            if (strpos($breadcrumb->url, '=') !== false) {
-                $string_parts = explode("=", $breadcrumb->url);
-                $pid = $string_parts[1];
-                if(!$this->onAllowedBranches($this->pages->get($pid))) {
-                    wire('breadcrumbs')->remove($breadcrumb);
-                }
+    public function modifyBreadcrumb($event) {
+        $href = $event->arguments[0];
+        if (strpos($href, '=') !== false) {
+            $string_parts = explode("=", $href);
+            $pid = $string_parts[1];
+            if(!$this->onAllowedBranches($this->pages->get((int)$pid))) {
+                //if there is more than one check prevents removal of "Home" breadcrumb
+                if(wire('breadcrumbs')->count() > 1) wire('breadcrumbs')->pop();
             }
         }
     }
