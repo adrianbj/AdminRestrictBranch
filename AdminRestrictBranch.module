@@ -23,7 +23,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             'title' => 'Admin Restrict Branch',
             'summary' => 'Restrict site editors to a single branch of the tree.',
             'href' => 'https://processwire.com/talk/topic/11499-admin-restrict-branch/',
-            'version' => 21,
+            'version' => 22,
             'autoload' => true,
             'singular' => true,
             'icon' => 'key'
@@ -50,7 +50,8 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
                 "phpCode" => '',
                 "branchExclusions" => null,
                 "restrictType" => 'editing_and_view',
-                "restrictFromSearch" => null
+                "restrictFromSearch" => null,
+                "modifyBreadcrumbs" => null
             );
     }
 
@@ -98,6 +99,22 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             }
             else {
                 $this->addHookBefore('ProcessPageList::execute', $this, 'resetId', array('priority'=>1));
+            }
+            //modify breadcrumbs to remove pages outside restricted branch
+            if($this->data['modifyBreadcrumbs']) $this->addHookBefore('ProcessPageEdit::execute', $this, 'modifyBreadcrumb');
+        }
+    }
+
+    public function modifyBreadcrumb() {
+        $i=0;
+        foreach(wire('breadcrumbs') as $breadcrumb) {
+            if (strpos($breadcrumb->url, '=') !== false) {
+                $string_parts = explode("=", $breadcrumb->url);
+                $pid = $string_parts[1];
+                if(!$this->onAllowedBranches($this->pages->get($pid))) {
+                    unset(wire('breadcrumbs')[$i]);
+                }
+                $i++;
             }
         }
     }
@@ -159,11 +176,11 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         }
         else {
             //option to match branch parent defined in user profile
-            //if none specified, default to the homepage: id = 1
-            $p = $this->user->branch_parent->id ? $this->user->branch_parent : $this->pages->get(1);
+            $p = $this->user->branch_parent;
         }
 
-        return $p->id;
+        //if none specified, default to the homepage: id = 1
+        return $p->id ? $p->id : 1;
 
     }
 
@@ -292,8 +309,15 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         $f = wire('modules')->get("InputfieldCheckbox");
         $f->attr('name', 'restrictFromSearch');
         $f->label = __('Restrict from search results', __FILE__);
-        $f->description = __('Check this to prevent search results in the admin from finding pages outside of the restricted page tree. This is primarily for the autocomplete response when inserting a link to a URL from a CKEditor field.', __FILE__);
+        $f->description = __('Check this to prevent search results in the admin from finding pages outside of the restricted branch. This is primarily for the autocomplete response when inserting a link to a URL from a CKEditor field.', __FILE__);
         $f->attr('checked', $data['restrictFromSearch'] == '1' ? 'checked' : '' );
+        $wrapper->add($f);
+
+        $f = wire('modules')->get("InputfieldCheckbox");
+        $f->attr('name', 'modifyBreadcrumbs');
+        $f->label = __('Modify Breadcrumbs', __FILE__);
+        $f->description = __('Check this to remove pages from the breadcrumbs that are outside of the restricted branch.', __FILE__);
+        $f->attr('checked', $data['modifyBreadcrumbs'] == '1' ? 'checked' : '' );
         $wrapper->add($f);
 
         return $wrapper;
