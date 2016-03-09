@@ -16,9 +16,16 @@ There are three ways to match users to a branch parent:
 
 Name matching can be limited to a specific parent to reduce mis-matches and improve matching efficiency.
 
-You can determine whether to limit editing and list viewing, or just editing.
+Determine whether to limit editing and list viewing, or just editing.
 
-You can specify branch exclusions which will allow for editing of PageTable content housed in external parent branches and some other use cases.
+Specify branch exclusions which will allow for editing of PageTable content housed in external parent branches and some other use cases.
+
+Conditionally prevent admin search from returning restricted pages for things like inserting links to pages via the autocomplete option in CKEditor.
+
+Conditionally modify breadcrumbs to remove pages that are outside the restricted branch.
+
+####Support forum:
+https://processwire.com/talk/topic/11499-admin-restrict-branch/
 
 ## License
 
