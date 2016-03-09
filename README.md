@@ -24,8 +24,10 @@ Conditionally prevent admin search from returning restricted pages for things li
 
 Conditionally modify breadcrumbs to remove pages that are outside the restricted branch.
 
+
 ####Support forum:
 https://processwire.com/talk/topic/11499-admin-restrict-branch/
+
 
 ## License
 
