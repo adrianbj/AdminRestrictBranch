@@ -24,7 +24,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             'summary' => 'Restrict site editors to a single branch of the tree.',
             'author' => 'Adrian Jones',
             'href' => 'https://processwire.com/talk/topic/11499-admin-restrict-branch/',
-            'version' => 26,
+            'version' => 27,
             'autoload' => true,
             'singular' => true,
             'icon' => 'key'
@@ -174,7 +174,14 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         }
         elseif($this->data['matchType'] == 'custom_php_code') {
             $user = $this->user;
-            $p = wire('pages')->get($branchesParentSelector . "has_parent!=2, name=".$this->sanitizer->pageNameTranslate(eval($this->data['phpCode'])).", include=all");
+            $evaldName = eval($this->data['phpCode']);
+            // if it includes a forward slash then it's a path match, not a name match
+            if(strpos($evaldName, '/') !== false) {
+                $p = wire('pages')->get($evaldName);
+            }
+            else {
+                $p = wire('pages')->get($branchesParentSelector . "has_parent!=2, name=".$this->sanitizer->pageNameTranslate($evaldName));
+            }
         }
         else {
             //option to match branch parent defined in user profile
@@ -274,8 +281,8 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         $f = wire('modules')->get("InputfieldPageListSelect");
         $f->attr('name', 'branchesParent');
         $f->label = __('Parent to restrict Role Name and Custom PHP code matches to.', __FILE__);
-        $f->description = __("The Role Name and Custom PHP code options match a page name (not a path), so this option limits matching to branches under the selected parent.", __FILE__);
-        $f->notes = __("This setting is optional but recommended - if no page is chosen, the selector will search the entire page tree for matching page names. Note that it is checked using 'has_parent' so the selected page can be further up the tree than a direct parent.", __FILE__);
+        $f->description = __('The Role Name option matches a page name (not a path), so this option limits matching to branches under the selected parent. This can also be used for the Custom PHP code option if you choose to return a name, rather than a path. Note: a path is recommended.', __FILE__);
+        $f->notes = __('This setting is optional but recommended if trying to match a page name (rather than a path) - if no page is chosen, the selector will search the entire page tree for matching page names. Note that it is checked using "has_parent" so the selected page can be further up the tree than a direct parent.', __FILE__);
         $f->showIf="matchType!='specified_parent'";
         $f->value = $data['branchesParent'];
         $wrapper->add($f);
@@ -283,8 +290,8 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         $f = wire('modules')->get("InputfieldText");
         $f->attr('name', 'phpCode');
         $f->label = __('Custom PHP code', __FILE__);
-        $f->description = __('Has access to $user variable.', __FILE__);
-        $f->notes = __('Example', __FILE__) . ': ' . 'return strtolower($user->first_name . "-" . $user->last_name);' . PHP_EOL . __("This example allows automatic restriction of a user to a branch named to match their first and last names.", __FILE__);
+        $f->description = __('This can return a name or a path. A path is recommended.', __FILE__);
+        $f->notes = __('Has access to $user variable.', __FILE__) . PHP_EOL . PHP_EOL . __("This example allows automatic restriction of a user to a branch named to match their first and last names.", __FILE__) . PHP_EOL . 'return strtolower($user->first_name . "-" . $user->last_name);' . PHP_EOL . PHP_EOL . __("This example shows how to restrict the editor user role to a page path.", __FILE__) . PHP_EOL . 'return ($user->hasRole("editor")) ? "/restricted-branches/editor/" : "";';
         $f->required = true;
         $f->showIf="matchType='custom_php_code'";
         $f->requiredIf="matchType='custom_php_code'";
