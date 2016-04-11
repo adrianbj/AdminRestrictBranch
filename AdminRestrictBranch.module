@@ -291,7 +291,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         $f->attr('name', 'phpCode');
         $f->label = __('Custom PHP code', __FILE__);
         $f->description = __('This can return a name or a path. A path is recommended.', __FILE__);
-        $f->notes = __('Has access to $user variable.', __FILE__) . PHP_EOL . PHP_EOL . __("This example allows automatic restriction of a user to a branch named to match their first and last names.", __FILE__) . PHP_EOL . 'return strtolower($user->first_name . "-" . $user->last_name);' . PHP_EOL . PHP_EOL . __("This example shows how to restrict the editor user role to a page path.", __FILE__) . PHP_EOL . 'return ($user->hasRole("editor")) ? "/restricted-branches/editor/" : "";';
+        $f->notes = __('Has access to $user variable.', __FILE__) . PHP_EOL . PHP_EOL . __("This example allows automatic restriction of a user to a branch named to match their first and last names.", __FILE__) . PHP_EOL . 'return strtolower($user->first_name . "-" . $user->last_name);' . PHP_EOL . PHP_EOL . __("This example shows how to restrict the editor user role to a page path.", __FILE__) . PHP_EOL . 'return ($user->hasRole("editor")) ? "/restricted-branches/editor/" : "/";';
         $f->required = true;
         $f->showIf="matchType='custom_php_code'";
         $f->requiredIf="matchType='custom_php_code'";
