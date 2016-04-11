@@ -24,7 +24,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             'summary' => 'Restrict site editors to a single branch of the tree.',
             'author' => 'Adrian Jones',
             'href' => 'https://processwire.com/talk/topic/11499-admin-restrict-branch/',
-            'version' => 27,
+            'version' => 28,
             'autoload' => true,
             'singular' => true,
             'icon' => 'key'
@@ -98,7 +98,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             if(!isset($_GET['id'])) {
                 $this->addHookBefore('ProcessPageList::execute', $this, 'setBranchRoot', array('priority'=>2));
             }
-            elseif(is_int($_GET['id'])) {
+            elseif(is_numeric($_GET['id'])) {
                 $this->addHookBefore('ProcessPageList::execute', $this, 'resetId', array('priority'=>1));
             }
             //modify breadcrumbs to remove pages outside restricted branch
@@ -138,7 +138,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 
     //in case the user tries to manually pass an id in the url to access another branch
     public function resetId() {
-        if(isset($_GET['id']) && !$this->onAllowedBranches($this->pages->get($_GET['id']))) {
+        if(isset($_GET['id']) && !$this->onAllowedBranches($this->pages->get((int)$_GET['id']))) {
             //get the restricted branch root
             $_GET['id'] = $this->branchRootParentId;
         }
