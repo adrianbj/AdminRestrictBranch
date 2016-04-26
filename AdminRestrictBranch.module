@@ -24,7 +24,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             'summary' => 'Restrict site editors to a single branch of the tree.',
             'author' => 'Adrian Jones',
             'href' => 'https://processwire.com/talk/topic/11499-admin-restrict-branch/',
-            'version' => 28,
+            'version' => 29,
             'autoload' => true,
             'singular' => true,
             'icon' => 'key'
@@ -48,6 +48,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             return array(
                 "matchType" => null,
                 "branchesParent" => null,
+                "allOrNone" => 'all',
                 "phpCode" => '',
                 "branchExclusions" => null,
                 "restrictType" => 'editing_and_view',
@@ -137,7 +138,14 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
     }
 
     //in case the user tries to manually pass an id in the url to access another branch
-    public function resetId() {
+    public function resetId($event) {
+
+        if($this->data['allOrNone'] == 'none' || $this->branchRootParentId === false) {
+            $this->error("You don't have permission to view this branch of the page tree.");
+            $event->replace = true;
+            $event->return = false;
+        }
+
         if(isset($_GET['id']) && !$this->onAllowedBranches($this->pages->get((int)$_GET['id']))) {
             //get the restricted branch root
             $_GET['id'] = $this->branchRootParentId;
@@ -146,12 +154,28 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 
 
     //set pagelist root to the correct parent based on the "How to match user to branch settings"
-    public function setBranchRoot() {
+    public function setBranchRoot($event) {
+
+        if($this->data['allOrNone'] == 'none' || $this->branchRootParentId === false) {
+            $this->error("You don't have permission to view this branch of the page tree.");
+            $event->replace = true;
+            $event->return = false;
+        }
 
         //set parent page of branch
         $_GET['id'] = $this->branchRootParentId;
 
-        //if open get variable is set and it matched the defined parent,
+        //if pagelist_open cookie is set and it matches the defined parent,
+        //then need this to prevent doubling of page branch
+        if(isset(wire('input')->cookie->pagelist_open)) {
+            foreach(explode(',',wire('input')->cookie->pagelist_open) as $pageOpen) {
+                if(current(explode("-", $pageOpen)) == $this->branchRootParentId) {
+                    wire('input')->cookie->pagelist_open = str_replace($pageOpen, '', wire('input')->cookie->pagelist_open);
+                }
+            }
+        }
+
+        //if open get variable is set and it matches the defined parent,
         //then need this to prevent doubling of page branch
         if(isset($_GET['open']) && $_GET['open'] == $this->branchRootParentId) wire('input')->get->open = null;
     }
@@ -168,13 +192,18 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 
         if($this->data['matchType'] == 'role_name') {
             foreach(wire('user')->roles as $role){
-                $p = wire('pages')->get($branchesParentSelector . "has_parent!=2, name={$role->name}, include=all");
+                $p = wire('pages')->get($branchesParentSelector . "has_parent!=2, has_parent!=7, templates_id!=2, name={$role->name}, include=all");
                 if($p->id) break;
             }
         }
         elseif($this->data['matchType'] == 'custom_php_code') {
             $user = $this->user;
             $evaldName = eval($this->data['phpCode']);
+
+            //if false is return, then exit now and return false
+            //this results in an empty PageTreeList
+            if($evaldName === false) return false;
+
             // if it includes a forward slash then it's a path match, not a name match
             if(strpos($evaldName, '/') !== false) {
                 $p = wire('pages')->get($evaldName);
@@ -291,11 +320,20 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         $f->attr('name', 'phpCode');
         $f->label = __('Custom PHP code', __FILE__);
         $f->description = __('This can return a name or a path. A path is recommended.', __FILE__);
-        $f->notes = __('Has access to $user variable.', __FILE__) . PHP_EOL . PHP_EOL . __("This example allows automatic restriction of a user to a branch named to match their first and last names.", __FILE__) . PHP_EOL . 'return strtolower($user->first_name . "-" . $user->last_name);' . PHP_EOL . PHP_EOL . __("This example shows how to restrict the editor user role to a page path.", __FILE__) . PHP_EOL . 'return ($user->hasRole("editor")) ? "/restricted-branches/editor/" : "/";';
+        $f->notes = __('Has access to $user variable.', __FILE__) . PHP_EOL . PHP_EOL . __("This example allows automatic restriction of a user to a branch named to match their first and last names.", __FILE__) . PHP_EOL . 'return strtolower($user->first_name . "-" . $user->last_name);' . PHP_EOL . PHP_EOL . __("This example shows how to restrict the editor user role to a page path. If your conditional returns 'false' (without quotes) instead of '/', non-matching users will be denied access to the entire page tree.", __FILE__) . PHP_EOL . 'return ($user->hasRole("editor")) ? "/restricted-branches/editor/" : "/";';
         $f->required = true;
         $f->showIf="matchType='custom_php_code'";
         $f->requiredIf="matchType='custom_php_code'";
         $f->value = $data['phpCode'];
+        $wrapper->add($f);
+
+        $f = wire('modules')->get("InputfieldRadios");
+        $f->attr('name', 'allOrNone');
+        $f->label = __('If no match, give all access or no access?', __FILE__);
+        $f->description = __("If the user doesn't match based on the defined rule, do you want the user to have access to the entire page tree or have no access?", __FILE__);
+        $f->addOption('all', __('Entire Page Tree', __FILE__));
+        $f->addOption('none', __('No Access', __FILE__));
+        $f->value = $data['allOrNone'];
         $wrapper->add($f);
 
         $f = wire('modules')->get("InputfieldRadios");

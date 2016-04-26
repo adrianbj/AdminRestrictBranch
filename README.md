@@ -16,6 +16,8 @@ There are three ways to match users to a branch parent:
 
 Name matching can be limited to a specific parent to reduce mis-matches and improve matching efficiency.
 
+Determine whether non-matched users will have access to the entire page tree, or no access at all.
+
 Determine whether to limit editing and list viewing, or just editing.
 
 Specify branch exclusions which will allow for editing of PageTable content housed in external parent branches and some other use cases.
