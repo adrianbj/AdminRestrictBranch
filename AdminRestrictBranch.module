@@ -24,7 +24,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             'summary' => 'Restrict site editors to a single branch of the tree.',
             'author' => 'Adrian Jones',
             'href' => 'https://processwire.com/talk/topic/11499-admin-restrict-branch/',
-            'version' => 29,
+            'version' => 30,
             'autoload' => true,
             'singular' => true,
             'icon' => 'key'
@@ -140,15 +140,17 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
     //in case the user tries to manually pass an id in the url to access another branch
     public function resetId($event) {
 
-        if($this->data['allOrNone'] == 'none' || $this->branchRootParentId === false) {
-            $this->error("You don't have permission to view this branch of the page tree.");
-            $event->replace = true;
-            $event->return = false;
-        }
-
         if(isset($_GET['id']) && !$this->onAllowedBranches($this->pages->get((int)$_GET['id']))) {
             //get the restricted branch root
             $_GET['id'] = $this->branchRootParentId;
+        }
+        else {
+            $access = $this->accessCheck();
+            if($access != 'all') {
+                $this->error($access);
+                $event->replace = true;
+                $event->return = false;
+            }
         }
     }
 
@@ -156,8 +158,9 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
     //set pagelist root to the correct parent based on the "How to match user to branch settings"
     public function setBranchRoot($event) {
 
-        if($this->data['allOrNone'] == 'none' || $this->branchRootParentId === false) {
-            $this->error("You don't have permission to view this branch of the page tree.");
+        $access = $this->accessCheck();
+        if($access != 'all') {
+            $this->error($access);
             $event->replace = true;
             $event->return = false;
         }
@@ -180,6 +183,14 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         if(isset($_GET['open']) && $_GET['open'] == $this->branchRootParentId) wire('input')->get->open = null;
     }
 
+    public function accessCheck() {
+        if(($this->data['allOrNone'] == 'none' && $this->branchRootParentId == 1) || $this->branchRootParentId === false) {
+            return __("You don't have permission to view this branch of the page tree.");
+        }
+        else {
+            return 'all';
+        }
+    }
 
     public function getBranchRootParentId() {
 
