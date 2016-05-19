@@ -24,7 +24,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             'summary' => 'Restrict site editors to a single branch of the tree.',
             'author' => 'Adrian Jones',
             'href' => 'https://processwire.com/talk/topic/11499-admin-restrict-branch/',
-            'version' => 31,
+            'version' => 35,
             'autoload' => true,
             'singular' => true,
             'icon' => 'key'
@@ -105,6 +105,9 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             }
             //modify breadcrumbs to remove pages outside restricted branch
             if($this->data['modifyBreadcrumbs']) $this->addHookAfter('Process::breadcrumb', $this, 'modifyBreadcrumb');
+
+            //make Add New button respect branch restrictions
+            $this->addHookAfter('ProcessPageAdd::executeNavJSON', $this, 'restrictPageAdd');
         }
     }
 
@@ -121,6 +124,23 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
                 }
             }
         }
+    }
+
+    public function restrictPageAdd($event) {
+        $responseArray = is_array($event->return) ? $event->return : json_decode($event->return, true);
+        $matches = $responseArray['list'];
+        $i=0;
+        foreach($matches as $match) {
+            if(!is_array($match)) continue;
+            if($match['parent_id'] == 0) {
+                $allowedPages = $this->pages->find("has_parent=".$this->branchRootParentId.",template=".$match['template_id']);
+                $matches[$i]['parent_id'] = $allowedPages->first()->parent->id;
+                $matches[$i]['url'] = $match['url'] . '&parent_id='.$allowedPages->first()->parent->id;
+            }
+            $i++;
+        }
+        $responseArray['list'] = $matches;
+        $event->return = is_array($event->return) ? $responseArray : json_encode($responseArray);
     }
 
     public function restrictFromSearch($event) {
@@ -168,14 +188,10 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         //set parent page of branch
         $_GET['id'] = $this->branchRootParentId;
 
-        //if pagelist_open cookie is set and it matches the defined parent,
+        //if pagelist_open cookie is set
         //then need this to prevent doubling of page branch
-        if(isset(wire('input')->cookie->pagelist_open)) {
-            foreach(explode(',',wire('input')->cookie->pagelist_open) as $pageOpen) {
-                if(current(explode("-", $pageOpen)) == $this->branchRootParentId) {
-                    wire('input')->cookie->pagelist_open = str_replace($pageOpen, '', wire('input')->cookie->pagelist_open);
-                }
-            }
+        if(isset(wire('input')->cookie->pagelist_open) && $this->branchRootParentId !== 1) {
+            wire('input')->cookie->pagelist_open = str_replace('"1-0",', '', wire('input')->cookie->pagelist_open);
         }
 
         //if open get variable is set and it matches the defined parent,
