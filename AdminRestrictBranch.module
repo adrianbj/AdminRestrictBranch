@@ -24,7 +24,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             'summary' => 'Restrict site editors to a single branch of the tree.',
             'author' => 'Adrian Jones',
             'href' => 'https://processwire.com/talk/topic/11499-admin-restrict-branch/',
-            'version' => 38,
+            'version' => 39,
             'autoload' => true,
             'singular' => true,
             'icon' => 'key'
@@ -37,6 +37,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
      *
      */
     protected $data = array();
+    protected $restrictionEnabled = false;
     protected $branchRootParentId = '';
     protected $noMatch = false;
 
@@ -81,6 +82,10 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         // get the branch root parent page ID for the matched page
         $this->branchRootParentId = $this->getBranchRootParentId();
 
+        // if the matched branch parent is home (this can actually also mean there was no match) and non-matching users
+        // are allowed to view 'all' then exit because we don't need to do anything else with this module
+        if($this->branchRootParentId === 1 && $this->data['allOrNone'] == 'all') return;
+
         // modify $page->editable() and $page->addable() based on branch restrictions - works in admin and front-end (for FREDI, FEEL, etc)
         $this->addHookAfter('Page::editable', $this, 'hookPageEditable');
         $this->addHookAfter('Page::addable', $this, 'hookPageAddable');
@@ -88,12 +93,14 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         // restrict from search results, like for pages returned from autocomplete when inserting a link to a page in a CKEditor field
         if($this->data['restrictFromSearch']) $this->addHookAfter('ProcessPageSearch::executeFor', $this, 'restrictFromSearch');
 
+        $this->restrictionEnabled = true;
+
     }
 
     public function ready() {
-        //early exit if match type not set yet or superuser
-        //the superuser check also prevents this messing with ProcessLister in module config settings
-        if($this->data['matchType'] == 'disabled' || $this->data['matchType'] == '' || $this->user->isSuperuser()) return;
+
+        // exit if enabled not true from init()
+        if(!$this->restrictionEnabled) return;
 
         //only set up page list restriction hook if in admin and restrict type allows it
         if($this->page->template == 'admin' && $this->data['restrictType'] == 'editing_and_view') {
