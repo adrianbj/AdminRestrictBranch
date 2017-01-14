@@ -24,7 +24,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             'summary' => 'Restrict site editors to a single branch of the tree.',
             'author' => 'Adrian Jones',
             'href' => 'https://processwire.com/talk/topic/11499-admin-restrict-branch/',
-            'version' => 40,
+            'version' => 41,
             'autoload' => true,
             'singular' => true,
             'icon' => 'key'
@@ -293,6 +293,8 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 
     public function branchCheck($page) {
         $access = $this->accessCheck();
+        $repeaterParent = wire('pages')->get("path=".wire('config')->paths->admin . "repeaters/");
+        array_push($this->data['branchExclusions'], $repeaterParent->id);
         if(in_array($page->id, $this->data['branchExclusions'])) {
             return true;
         }
