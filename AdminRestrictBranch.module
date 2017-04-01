@@ -24,7 +24,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             'summary' => 'Restrict site editors to a single branch of the tree.',
             'author' => 'Adrian Jones',
             'href' => 'https://processwire.com/talk/topic/11499-admin-restrict-branch/',
-            'version' => 41,
+            'version' => '1.0.0',
             'autoload' => true,
             'singular' => true,
             'icon' => 'key'
@@ -48,7 +48,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
      */
     static public function getDefaultData() {
             return array(
-                "matchType" => null,
+                "matchType" => 'disabled',
                 "branchesParent" => null,
                 "allOrNone" => 'all',
                 "phpCode" => '',
@@ -354,7 +354,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         $f = wire('modules')->get("InputfieldRadios");
         $f->attr('name', 'matchType');
         $f->label = __('How to match user to branch', __FILE__);
-        $f->description = "• " . __("'Role Name' limits users to the branch whose parent page name matches the name of one of their roles (eg. 'branch-one' role will be restricted to the 'Branch One' branch).", __FILE__) . PHP_EOL . "• " . __("'Specified Parent' is specifically set on each user's profile page using the 'Branch parent to restrict access to' field.", __FILE__) . PHP_EOL . "• " . __("'Custom PHP Code' allows you to build up a page name based on user fields.", __FILE__);
+        $f->description = "• " . __("'Specified Parent' is specifically set on each user's profile page using the 'Branch parent to restrict access to' field.", __FILE__) . PHP_EOL . "• " . __("'Role Name' limits users to the branch whose parent page name matches the name of one of their roles, eg. 'branch-one' role will be restricted to the 'Branch One' branch.", __FILE__) . PHP_EOL . "• " . __("'Custom PHP Code' allows you to build up a page name based on user fields.", __FILE__);
         $f->required = true;
         $f->addOption('disabled', __('Disabled', __FILE__));
         $f->addOption('specified_parent', __('Specified Branch Parent', __FILE__));
@@ -387,6 +387,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         $f->attr('name', 'allOrNone');
         $f->label = __('If no match, give all access or no access?', __FILE__);
         $f->description = __("If the user doesn't match based on the defined rule, do you want the user to have access to the entire page tree or have no access?", __FILE__);
+        $f->required = true;
         $f->addOption('all', __('Entire Page Tree', __FILE__));
         $f->addOption('none', __('No Access', __FILE__));
         $f->value = $data['allOrNone'];
