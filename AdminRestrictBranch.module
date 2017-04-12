@@ -24,7 +24,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             'summary' => 'Restrict site editors to a single branch of the tree.',
             'author' => 'Adrian Jones',
             'href' => 'https://processwire.com/talk/topic/11499-admin-restrict-branch/',
-            'version' => '1.0.1',
+            'version' => '1.0.2',
             'autoload' => true,
             'singular' => true,
             'icon' => 'key'
@@ -115,17 +115,18 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 
             //make Add New button respect branch restrictions
             $this->addHookAfter('ProcessPageAdd::executeNavJSON', $this, 'restrictPageAdd');
+            $this->addHookBefore('ProcessPageList::executeNavJSON', $this, 'restrictPageList');
 
             //make sure results from Lister are limited to restricted branch
             $this->addHookAfter('ProcessPageLister::getSelector', $this, 'limitLister');
         }
     }
 
-    public function limitLister ($event) {
+    protected function limitLister ($event) {
         $event->return = $event->return . ', has_parent='.$this->branchRootParentId;
     }
 
-    public function modifyBreadcrumb($event) {
+    protected function modifyBreadcrumb($event) {
         $href = $event->arguments[0];
         if (strpos($href, '=') !== false) {
             $string_parts = explode("=", $href);
@@ -140,7 +141,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         }
     }
 
-    public function restrictPageAdd($event) {
+    protected function restrictPageAdd($event) {
         $responseArray = is_array($event->return) ? $event->return : json_decode($event->return, true);
         $matches = $responseArray['list'];
         $i=0;
@@ -159,7 +160,11 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         $event->return = is_array($event->return) ? $responseArray : json_encode($responseArray);
     }
 
-    public function restrictFromSearch($event) {
+    protected function restrictPageList($event) {
+        if(!$this->wire('input')->get->parent_id) $this->wire('input')->get->parent_id = $this->branchRootParentId;
+    }
+
+    protected function restrictFromSearch($event) {
         $response = $event->return;
         $responseArray = json_decode($response, true);
         $matches = $responseArray['matches'];
@@ -175,7 +180,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
     }
 
     //in case the user tries to manually pass an id in the url to access another branch
-    public function resetId($event) {
+    protected function resetId($event) {
 
         $access = $this->accessCheck();
         if($access != 'all') {
@@ -193,7 +198,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 
 
     //set pagelist root to the correct parent based on the "How to match user to branch settings"
-    public function setBranchRoot($event) {
+    protected function setBranchRoot($event) {
 
         $access = $this->accessCheck();
         if($access != 'all') {
@@ -217,7 +222,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         if(isset($_GET['open']) && $_GET['open'] == $this->branchRootParentId) $this->wire('input')->get->open = null;
     }
 
-    public function accessCheck() {
+    private function accessCheck() {
         if(($this->data['allOrNone'] == 'none' && $this->noMatch === true) || $this->branchRootParentId === false) {
             return __("You don't have permission to view this branch of the page tree.");
         }
@@ -226,7 +231,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         }
     }
 
-    public function getBranchRootParentId() {
+    private function getBranchRootParentId() {
 
         if(isset($this->data['branchesParent']) && $this->data['branchesParent']) {
             $branchesParentSelector = "has_parent=".$this->data['branchesParent'].", ";
@@ -281,7 +286,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
      *
      * From Netcarver
      */
-    public function onAllowedBranches($page) {
+    private function onAllowedBranches($page) {
         $page_on_my_branch = $this->branchCheck($page);
         if(!$page_on_my_branch) {
             $parents = $page->parents();
@@ -293,7 +298,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         return $page_on_my_branch;
     }
 
-    public function branchCheck($page) {
+    private function branchCheck($page) {
         $access = $this->accessCheck();
         $repeaterParent = $this->wire('pages')->get("path=".$this->wire('config')->paths->admin . "repeaters/");
         array_push($this->data['branchExclusions'], $repeaterParent->id);
@@ -312,7 +317,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
      * Page::editable hook
      *
      */
-    public function hookPageEditable($event) {
+    protected function hookPageEditable($event) {
         // in case there is already a defined exclusion for this user's role for this page
         if(!$event->return) return;
 
@@ -327,7 +332,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
      * Page::addable hook
      *
      */
-    public function hookPageAddable($event) {
+    protected function hookPageAddable($event) {
         // in case there is already a defined exclusion for this user's role for this page
         if(!$event->return) return;
 
