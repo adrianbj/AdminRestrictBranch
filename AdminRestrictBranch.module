@@ -24,7 +24,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             'summary' => 'Restrict site editors to a single branch of the tree.',
             'author' => 'Adrian Jones',
             'href' => 'https://processwire.com/talk/topic/11499-admin-restrict-branch/',
-            'version' => '1.0.2',
+            'version' => '1.0.3',
             'autoload' => true,
             'singular' => true,
             'icon' => 'key'
@@ -135,7 +135,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
                 $this->wire('breadcrumbs')->pop();
                 //add a "Pages" breadcrumb so it is easy to get back to the main PageList view
                 if($this->wire('breadcrumbs')->count() == 0) {
-                    $this->wire('breadcrumbs')->add(new Breadcrumb($this->wire('config')->urls->admin . '/page/', 'Pages'));
+                    $this->wire('breadcrumbs')->add(new Breadcrumb($this->wire('config')->urls->admin . 'page/', 'Pages'));
                 }
             }
         }
@@ -231,7 +231,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         }
     }
 
-    private function getBranchRootParentId() {
+    protected function ___getBranchRootParentId() {
 
         if(isset($this->data['branchesParent']) && $this->data['branchesParent']) {
             $branchesParentSelector = "has_parent=".$this->data['branchesParent'].", ";

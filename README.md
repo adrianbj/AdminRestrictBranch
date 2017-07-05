@@ -3,7 +3,7 @@ Admin Restrict Branch
 
 Processwire module to restrict site editors to a single branch of the tree.
 
-###Functionality
+### Functionality
 
 You can restrict the user to only be able to view and/or edit pages from a specific branch of the page tree.
 
@@ -27,7 +27,7 @@ Conditionally prevent admin search from returning restricted pages for things li
 Conditionally modify breadcrumbs to remove pages that are outside the restricted branch.
 
 
-####Support forum:
+#### Support forum:
 https://processwire.com/talk/topic/11499-admin-restrict-branch/
 
 
