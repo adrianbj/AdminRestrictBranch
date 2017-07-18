@@ -300,7 +300,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 
     private function branchCheck($page) {
         $access = $this->accessCheck();
-        $repeaterParent = $this->wire('pages')->get("path=".$this->wire('config')->paths->admin . "repeaters/");
+        $repeaterParent = $this->wire('pages')->get("path=".$this->wire('config')->urls->admin . "repeaters/");
         array_push($this->data['branchExclusions'], $repeaterParent->id);
         if(in_array($page->id, $this->data['branchExclusions'])) {
             return true;
