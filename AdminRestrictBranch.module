@@ -269,7 +269,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 
         //if no match, default to the homepage: id = 1, but set noMatch variable
         //so it can be used in conjunction with the allOrNone setting to determine what they have access to
-        if($p->id) {
+        if($p && $p->id) {
             return $p->id;
         }
         else {
