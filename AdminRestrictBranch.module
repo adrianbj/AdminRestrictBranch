@@ -24,7 +24,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             'summary' => 'Restrict site editors to a single branch of the tree.',
             'author' => 'Adrian Jones',
             'href' => 'https://processwire.com/talk/topic/11499-admin-restrict-branch/',
-            'version' => '1.0.5',
+            'version' => '1.0.6',
             'autoload' => true,
             'singular' => true,
             'icon' => 'key'
@@ -123,6 +123,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
     }
 
     protected function limitLister ($event) {
+        if($this->wire('page')->name == 'users') return;
         $event->return = $event->return . ', has_parent='.$this->branchRootParentId;
     }
 
