@@ -24,7 +24,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             'summary' => 'Restrict site editors to a single branch of the tree.',
             'author' => 'Adrian Jones',
             'href' => 'https://processwire.com/talk/topic/11499-admin-restrict-branch/',
-            'version' => '1.0.7',
+            'version' => '1.0.8',
             'autoload' => true,
             'singular' => true,
             'icon' => 'key'
@@ -249,6 +249,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         }
         elseif($this->data['matchType'] == 'custom_php_code') {
             $user = $this->wire('user');
+            $pages = $this->wire('pages');
             $evaldName = eval($this->data['phpCode']);
 
             //if false is return, then exit now and return false
@@ -384,7 +385,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         $f->attr('name', 'phpCode');
         $f->label = __('Custom PHP code', __FILE__);
         $f->description = __('This can return a name or a path. A path is recommended.', __FILE__);
-        $f->notes = __('Has access to $user variable.', __FILE__) . PHP_EOL . PHP_EOL . __("This example allows automatic restriction of a user to a branch named to match their first and last names.", __FILE__) . PHP_EOL . 'return strtolower($user->first_name . "-" . $user->last_name);' . PHP_EOL . PHP_EOL . __("This example shows how to restrict the editor user role to a page path. If your conditional returns 'false' (without quotes) instead of '/', non-matching users will be denied access to the entire page tree.", __FILE__) . PHP_EOL . 'return ($user->hasRole("editor")) ? "/restricted-branches/editor/" : "/";';
+        $f->notes = __('Has access to $user and $pages variable.', __FILE__) . PHP_EOL . PHP_EOL . __("This example allows automatic restriction of a user to a branch named to match their first and last names.", __FILE__) . PHP_EOL . 'return strtolower($user->first_name . "-" . $user->last_name);' . PHP_EOL . PHP_EOL . __("This example shows how to restrict the editor user role to a page path. If your conditional returns 'false' (without quotes) instead of '/', non-matching users will be denied access to the entire page tree.", __FILE__) . PHP_EOL . 'return ($user->hasRole("editor")) ? "/restricted-branches/editor/" : "/";';
         $f->required = true;
         $f->showIf="matchType='custom_php_code'";
         $f->requiredIf="matchType='custom_php_code'";
