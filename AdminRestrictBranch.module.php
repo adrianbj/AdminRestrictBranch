@@ -4,7 +4,7 @@
  * Processwire module to restrict site editors to a single branch of the tree.
  * by Adrian Jones
  *
- * ProcessWire 2.x
+ * ProcessWire 3.x
  * Copyright (C) 2011 by Ryan Cramer
  * Licensed under GNU/GPL v2, see LICENSE.TXT
  *
@@ -24,10 +24,11 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             'summary' => 'Restrict site editors to a single branch of the tree.',
             'author' => 'Adrian Jones',
             'href' => 'https://processwire.com/talk/topic/11499-admin-restrict-branch/',
-            'version' => '1.0.7',
+            'version' => '1.0.9',
             'autoload' => true,
             'singular' => true,
-            'icon' => 'key'
+            'icon' => 'key',
+            'requires' => 'ProcessWire>=2.5.14',
         );
     }
 
@@ -76,7 +77,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
      */
     public function init() {
 
-        //early exit if match type not set yet or superuser
+        // early exit if match type not set yet or superuser
         if($this->data['matchType'] == 'disabled' || $this->data['matchType'] == '' || $this->wire('user')->isSuperuser()) return;
 
         // get the branch root parent page ID for the matched page
@@ -87,11 +88,11 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         if($this->branchRootParentId === 1 && $this->data['allOrNone'] == 'all') return;
 
         // modify $page->editable() and $page->addable() based on branch restrictions - works in admin and front-end (for FREDI, FEEL, etc)
-        $this->addHookAfter('Page::editable', $this, 'hookPageEditable');
-        $this->addHookAfter('Page::addable', $this, 'hookPageAddable');
+        $this->wire()->addHookAfter('Page::editable', $this, 'hookPageEditable');
+        $this->wire()->addHookAfter('Page::addable', $this, 'hookPageAddable');
 
         // restrict from search results, like for pages returned from autocomplete when inserting a link to a page in a CKEditor field
-        if($this->data['restrictFromSearch']) $this->addHookAfter('ProcessPageSearch::executeFor', $this, 'restrictFromSearch');
+        if($this->data['restrictFromSearch']) $this->wire()->addHookAfter('ProcessPageSearch::executeFor', $this, 'restrictFromSearch');
 
         $this->restrictionEnabled = true;
 
@@ -102,23 +103,23 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         // exit if enabled not true from init()
         if(!$this->restrictionEnabled) return;
 
-        //only set up page list restriction hook if in admin and restrict type allows it
+        // only set up page list restriction hook if in admin and restrict type allows it
         if($this->wire('page')->template == 'admin' && $this->data['restrictType'] == 'editing_and_view') {
             if(!isset($_GET['id'])) {
-                $this->addHookBefore('ProcessPageList::execute', $this, 'setBranchRoot', array('priority'=>2));
+                $this->wire()->addHookBefore('ProcessPageList::execute', $this, 'setBranchRoot', array('priority'=>2));
             }
             elseif(is_numeric($_GET['id'])) {
-                $this->addHookBefore('ProcessPageList::execute', $this, 'resetId', array('priority'=>1));
+                $this->wire()->addHookBefore('ProcessPageList::execute', $this, 'resetId', array('priority'=>1));
             }
-            //modify breadcrumbs to remove pages outside restricted branch
-            if($this->data['modifyBreadcrumbs']) $this->addHookAfter('Process::breadcrumb', $this, 'modifyBreadcrumb');
+            // modify breadcrumbs to remove pages outside restricted branch
+            if($this->data['modifyBreadcrumbs']) $this->wire()->addHookAfter('Process::breadcrumb', $this, 'modifyBreadcrumb');
 
-            //make Add New button respect branch restrictions
-            $this->addHookAfter('ProcessPageAdd::executeNavJSON', $this, 'restrictPageAdd');
-            $this->addHookBefore('ProcessPageList::executeNavJSON', $this, 'restrictPageList');
+            // make Add New button respect branch restrictions
+            $this->wire()->addHookAfter('ProcessPageAdd::executeNavJSON', $this, 'restrictPageAdd');
+            $this->wire()->addHookBefore('ProcessPageList::executeNavJSON', $this, 'restrictPageList');
 
-            //make sure results from Lister are limited to restricted branch
-            $this->addHookAfter('ProcessPageLister::getSelector', $this, 'limitLister');
+            // make sure results from Lister are limited to restricted branch
+            $this->wire()->addHookAfter('ProcessPageLister::getSelector', $this, 'limitLister');
         }
     }
 
@@ -134,7 +135,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             $pid = $string_parts[1];
             if(!$this->onAllowedBranches($this->wire('pages')->get((int)$pid))) {
                 $this->wire('breadcrumbs')->pop();
-                //add a "Pages" breadcrumb so it is easy to get back to the main PageList view
+                // add a "Pages" breadcrumb so it is easy to get back to the main PageList view
                 if($this->wire('breadcrumbs')->count() == 0) {
                     $this->wire('breadcrumbs')->add(new Breadcrumb($this->wire('config')->urls->admin . 'page/', 'Pages'));
                 }
@@ -180,7 +181,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         $event->return = json_encode($responseArray);
     }
 
-    //in case the user tries to manually pass an id in the url to access another branch
+    // in case the user tries to manually pass an id in the url to access another branch
     protected function resetId($event) {
 
         $access = $this->accessCheck();
@@ -191,14 +192,14 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         }
 
         if(isset($_GET['id']) && !$this->onAllowedBranches($this->wire('pages')->get((int)$_GET['id']))) {
-            //get the restricted branch root
+            // get the restricted branch root
             $_GET['id'] = $this->branchRootParentId;
             $this->wire('input')->get->id = $_GET['id'];
         }
     }
 
 
-    //set pagelist root to the correct parent based on the "How to match user to branch settings"
+    // set pagelist root to the correct parent based on the "How to match user to branch settings"
     protected function setBranchRoot($event) {
 
         $access = $this->accessCheck();
@@ -208,18 +209,18 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             $event->return = false;
         }
 
-        //set parent page of branch
+        // set parent page of branch
         $_GET['id'] = $this->branchRootParentId;
         $this->wire('input')->get->id = $_GET['id'];
 
-        //if pagelist_open cookie is set
-        //then need this to prevent doubling of page branch
+        // if pagelist_open cookie is set
+        // then need this to prevent doubling of page branch
         if(isset($this->wire('input')->cookie->pagelist_open) && $this->branchRootParentId !== 1) {
             $this->wire('input')->cookie->pagelist_open = str_replace('"1-0",', '', $this->wire('input')->cookie->pagelist_open);
         }
 
-        //if open get variable is set and it matches the defined parent,
-        //then need this to prevent doubling of page branch
+        // if open get variable is set and it matches the defined parent,
+        // then need this to prevent doubling of page branch
         if(isset($_GET['open']) && $_GET['open'] == $this->branchRootParentId) $this->wire('input')->get->open = null;
     }
 
@@ -249,10 +250,11 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         }
         elseif($this->data['matchType'] == 'custom_php_code') {
             $user = $this->wire('user');
+            $pages = $this->wire('pages');
             $evaldName = eval($this->data['phpCode']);
 
-            //if false is return, then exit now and return false
-            //this results in an empty PageTreeList
+            // if false is return, then exit now and return false
+            // this results in an empty PageTreeList
             if($evaldName === false) return false;
 
             // if it includes a forward slash then it's a path match, not a name match
@@ -264,12 +266,12 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             }
         }
         else {
-            //option to match branch parent defined in user profile
+            // option to match branch parent defined in user profile
             $p = $this->wire('user')->branch_parent;
         }
 
-        //if no match, default to the homepage: id = 1, but set noMatch variable
-        //so it can be used in conjunction with the allOrNone setting to determine what they have access to
+        // if no match, default to the homepage: id = 1, but set noMatch variable
+        // so it can be used in conjunction with the allOrNone setting to determine what they have access to
         if($p && $p->id) {
             return $p->id;
         }
@@ -384,7 +386,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         $f->attr('name', 'phpCode');
         $f->label = __('Custom PHP code', __FILE__);
         $f->description = __('This can return a name or a path. A path is recommended.', __FILE__);
-        $f->notes = __('Has access to $user variable.', __FILE__) . PHP_EOL . PHP_EOL . __("This example allows automatic restriction of a user to a branch named to match their first and last names.", __FILE__) . PHP_EOL . 'return strtolower($user->first_name . "-" . $user->last_name);' . PHP_EOL . PHP_EOL . __("This example shows how to restrict the editor user role to a page path. If your conditional returns 'false' (without quotes) instead of '/', non-matching users will be denied access to the entire page tree.", __FILE__) . PHP_EOL . 'return ($user->hasRole("editor")) ? "/restricted-branches/editor/" : "/";';
+        $f->notes = __('Has access to $user and $pages variable.', __FILE__) . PHP_EOL . PHP_EOL . __("This example allows automatic restriction of a user to a branch named to match their first and last names.", __FILE__) . PHP_EOL . 'return strtolower($user->first_name . "-" . $user->last_name);' . PHP_EOL . PHP_EOL . __("This example shows how to restrict the editor user role to a page path. If your conditional returns 'false' (without quotes) instead of '/', non-matching users will be denied access to the entire page tree.", __FILE__) . PHP_EOL . 'return ($user->hasRole("editor")) ? "/restricted-branches/editor/" : "/";';
         $f->required = true;
         $f->showIf="matchType='custom_php_code'";
         $f->requiredIf="matchType='custom_php_code'";
@@ -438,7 +440,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 
     public function ___install() {
 
-        //Create branch_parent field on user template
+        // create branch_parent field on user template
         if(!$this->wire('fields')->branch_parent) {
             $f = new Field();
             $f->type = "FieldtypePage";
@@ -451,9 +453,11 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             $f->collapsed = Inputfield::collapsedBlank;
             $f->save();
 
-            $user_template = $this->wire('templates')->get("user");
-            $user_template->fields->add($f);
-            $user_template->fields->save();
+            foreach($this->wire('config')->userTemplateIDs as $userTemplateId) {
+                $userTemplate = $this->wire('templates')->get($userTemplateId);
+                $userTemplate->fields->add($f);
+                $userTemplate->fields->save();
+            }
 
         }
 
@@ -462,14 +466,16 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
 
     public function ___uninstall() {
 
-        //remove branch_parent field
+        // remove branch_parent field
         if($this->wire('fields')->branch_parent) {
 
             $f = $this->wire('fields')->branch_parent;
 
-            $user_template = $this->wire('templates')->get("user");
-            $user_template->fields->remove($f);
-            $user_template->fields->save();
+            foreach($this->wire('config')->userTemplateIDs as $userTemplateId) {
+                $userTemplate = $this->wire('templates')->get($userTemplateId);
+                $userTemplate->fields->remove($f);
+                $userTemplate->fields->save();
+            }
 
             $this->wire('fields')->delete($f);
 
