@@ -9,7 +9,8 @@ You can restrict the user to only be able to view and/or edit pages from a speci
 Restrictions work in the admin list view as well as via the API for front-end editing (works with FREDI, FEEL, and manual API calls).
 
 There are three ways to match users to a branch parent:
-* Specified Branch Parent
+* User Specified Branch Parent
+* Role Specified Branch Parent
 * Role Name
 * Custom PHP code
 
