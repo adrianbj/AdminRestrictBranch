@@ -24,7 +24,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             'summary' => 'Restrict site editors to a single branch of the tree.',
             'author' => 'Adrian Jones',
             'href' => 'https://processwire.com/talk/topic/11499-admin-restrict-branch/',
-            'version' => '1.0.10',
+            'version' => '1.0.11',
             'autoload' => true,
             'singular' => true,
             'icon' => 'key',
@@ -456,6 +456,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             $f = new Field();
             $f->type = "FieldtypePage";
             $f->derefAsPage = 2;
+            $f->allowUnpub = 1;
             $f->inputfield = "InputfieldPageListSelect";
             $f->name = "branch_parent";
             $f->label = "Branch parent to restrict access to";
