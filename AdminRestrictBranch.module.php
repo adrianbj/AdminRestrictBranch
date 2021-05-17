@@ -4,12 +4,8 @@
  * Processwire module to restrict site editors to a single branch of the tree.
  * by Adrian Jones
  *
- * ProcessWire 3.x
- * Copyright (C) 2011 by Ryan Cramer
+ * Copyright (C) 2021 by Adrian Jones
  * Licensed under GNU/GPL v2, see LICENSE.TXT
- *
- * http://www.processwire.com
- * http://www.ryancramer.com
  *
  */
 
@@ -24,7 +20,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
             'summary' => 'Restrict site editors to a single branch of the tree.',
             'author' => 'Adrian Jones',
             'href' => 'https://processwire.com/talk/topic/11499-admin-restrict-branch/',
-            'version' => '1.0.11',
+            'version' => '1.0.12',
             'autoload' => true,
             'singular' => true,
             'icon' => 'key',
@@ -48,16 +44,16 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
      *
      */
     static public function getDefaultData() {
-            return array(
-                "matchType" => 'disabled',
-                "branchesParent" => null,
-                "allOrNone" => 'all',
-                "phpCode" => '',
-                "branchExclusions" => null,
-                "restrictType" => 'editing_and_view',
-                "restrictFromSearch" => null,
-                "modifyBreadcrumbs" => null
-            );
+        return array(
+            "matchType" => 'disabled',
+            "branchesParent" => null,
+            "allOrNone" => 'all',
+            "phpCode" => '',
+            "branchExclusions" => null,
+            "restrictType" => 'editing_and_view',
+            "restrictFromSearch" => null,
+            "modifyBreadcrumbs" => null
+        );
     }
 
 
@@ -77,8 +73,8 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
      */
     public function init() {
 
-        // early exit if match type not set yet or superuser
-        if($this->data['matchType'] == 'disabled' || $this->data['matchType'] == '' || $this->wire('user')->isSuperuser()) return;
+        // early exit if match type not set yet or superuser or guest user (we don't need to restrict them further)
+        if($this->data['matchType'] == 'disabled' || $this->data['matchType'] == '' || $this->wire('user')->isSuperuser() || $this->wire('user')->isGuest()) return;
 
         // get the branch root parent page ID for the matched page
         $this->branchRootParentId = $this->getBranchRootParentId();
@@ -243,7 +239,7 @@ class AdminRestrictBranch extends WireData implements Module, ConfigurableModule
         }
 
         if($this->data['matchType'] == 'role_name') {
-            foreach($this->wire('user')->roles as $role){
+            foreach($this->wire('user')->roles as $role) {
                 $p = $this->wire('pages')->get($branchesParentSelector . "has_parent!=2, has_parent!=7, templates_id!=2, name={$role->name}, include=all");
                 if($p->id) break;
             }
